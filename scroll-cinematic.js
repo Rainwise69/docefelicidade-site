@@ -117,34 +117,51 @@ function initLightbox() {
   if (!lb) return;
   const imgEl = lb.querySelector(".lb-img");
   const capEl = lb.querySelector(".lb-cap");
-  const items = [...document.querySelectorAll("[data-lightbox]")];
+  const allItems = [...document.querySelectorAll("[data-lightbox]")];
+  let items = [];
   let idx = 0;
 
-  function open(i) {
+  function show(i) {
     idx = (i + items.length) % items.length;
     const src = items[idx].getAttribute("data-full") || items[idx].querySelector("img").src;
     const cap = items[idx].getAttribute("data-cap") || "";
     imgEl.src = src;
-    capEl.textContent = cap;
+    capEl.textContent = items.length > 1 ? `${idx + 1} / ${items.length} · ${cap}` : cap;
     lb.classList.add("open");
     document.body.style.overflow = "hidden";
     if (window.__lenis) window.__lenis.stop();
+  }
+  function open(item) {
+    const group = item.getAttribute("data-gallery") || "galeria-geral";
+    items = allItems.filter((candidate) => (candidate.getAttribute("data-gallery") || "galeria-geral") === group);
+    show(items.indexOf(item));
   }
   function close() {
     lb.classList.remove("open");
     document.body.style.overflow = "";
     if (window.__lenis) window.__lenis.start();
   }
-  items.forEach((it, i) => it.addEventListener("click", () => open(i)));
+  allItems.forEach((item) => {
+    item.addEventListener("click", () => open(item));
+    if (!/^(BUTTON|A)$/.test(item.tagName)) {
+      item.tabIndex = 0;
+      item.setAttribute("role", "button");
+      item.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        open(item);
+      });
+    }
+  });
   lb.querySelector(".lb-close").addEventListener("click", close);
-  lb.querySelector(".lb-next").addEventListener("click", (e) => { e.stopPropagation(); open(idx + 1); });
-  lb.querySelector(".lb-prev").addEventListener("click", (e) => { e.stopPropagation(); open(idx - 1); });
+  lb.querySelector(".lb-next").addEventListener("click", (e) => { e.stopPropagation(); show(idx + 1); });
+  lb.querySelector(".lb-prev").addEventListener("click", (e) => { e.stopPropagation(); show(idx - 1); });
   lb.addEventListener("click", (e) => { if (e.target === lb || e.target.classList.contains("lb-stage")) close(); });
   document.addEventListener("keydown", (e) => {
     if (!lb.classList.contains("open")) return;
     if (e.key === "Escape") close();
-    if (e.key === "ArrowRight") open(idx + 1);
-    if (e.key === "ArrowLeft") open(idx - 1);
+    if (e.key === "ArrowRight") show(idx + 1);
+    if (e.key === "ArrowLeft") show(idx - 1);
   });
 }
 
@@ -172,10 +189,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }, { threshold: 0.18 });
   document.querySelectorAll(".reveal, .stat-num").forEach((el) => io.observe(el));
 
-  // nav state on scroll + hide scroll hint
+  // The scroll-world uses a light paper background from its first frame, so the
+  // navigation remains solid instead of switching to the old white-on-video state.
   const nav = document.querySelector(".nav");
   lenis.on("scroll", ({ scroll }) => {
-    if (nav) nav.classList.toggle("nav--solid", scroll > 40);
+    if (nav) nav.classList.add("nav--solid");
     document.querySelectorAll(".scroll-hint").forEach(h => h.style.opacity = scroll > 60 ? "0" : "1");
   });
 

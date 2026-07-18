@@ -393,6 +393,11 @@ function mountScrollWorld(container, config) {
     route.style.opacity = worldChrome;
     scrollbar.style.opacity = worldChrome;
     topbar.style.opacity = worldChrome;
+    // The mobile readability gradient lives on this fixed layer. Fade and then
+    // remove the whole layer at the end of the world so it cannot wash over the
+    // normal page sections that follow.
+    copylayer.style.opacity = worldChrome;
+    copylayer.style.visibility = worldChrome <= 0.001 ? 'hidden' : 'visible';
     if (particles) particles.style.opacity = worldChrome;
     ticking = false;
   }

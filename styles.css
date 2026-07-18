@@ -851,11 +851,14 @@ em.o { font-style: italic; color: var(--orange); }
   .store-card h2 { font-size: clamp(2.35rem, 12vw, 3.5rem); }
   .signature-card { display: block; }
   .signature-card > img {
+    height: auto;
     aspect-ratio: 16 / 9;
     object-fit: cover;
   }
   .signature-card--pastel-solo > img {
-    object-position: center 52%;
+    object-fit: contain;
+    object-position: center;
+    background: #f1e3d0;
   }
   .signature-card__body { min-height: 0; }
   .availability { margin-top: 24px; }

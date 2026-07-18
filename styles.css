@@ -906,6 +906,7 @@ em.o { font-style: italic; color: var(--orange); }
     object-fit: contain;
   }
   .product-gallery--dry button { background: #37271a; }
+  .product-gallery--dry .product-gallery__main { order: 3; }
   .product-gallery--cakes button { background: #d97700; }
   .gallery-grid {
     display: flex;

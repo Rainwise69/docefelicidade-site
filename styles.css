@@ -426,6 +426,7 @@ em.o { font-style: italic; color: var(--orange); }
 }
 .signature-card > img {
   width: 100%;
+  height: auto;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: var(--cream-2);
@@ -849,6 +850,11 @@ em.o { font-style: italic; color: var(--orange); }
   .about h2,
   .store-card h2 { font-size: clamp(2.35rem, 12vw, 3.5rem); }
   .signature-card { display: block; }
+  .signature-card--pastel-trio > img {
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    object-position: center;
+  }
   .signature-card__body { min-height: 0; }
   .availability { margin-top: 24px; }
   .order-bar { align-items: stretch; flex-direction: column; }

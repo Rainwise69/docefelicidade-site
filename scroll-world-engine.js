@@ -105,11 +105,14 @@ function mountScrollWorld(container, config) {
   // for the good experience.
   const conn = navigator.connection;
   const dataSaver = !!(conn && conn.saveData);
-  const slowNet = !!(conn && /^(slow-2g|2g|3g)$/.test(conn.effectiveType || ''));
+  const slowNet = dataSaver || !!(conn && /^(slow-2g|2g|3g)$/.test(conn.effectiveType || ''));
   // Stills mode: the page becomes the stills cross-dissolving as you scroll — no video
-  // load, no decode. Entered up-front for prefers-reduced-motion and data-saver, and at
-  // runtime when iOS Low Power Mode blocks video (see enterStillsMode/primeVideo).
-  let stillsOnly = reduce || dataSaver;
+  // load or decode. It is reserved for an explicit reduced-motion preference; slow
+  // networks keep the lighter phone clips but use a much smaller prefetch window.
+  // Data Saver now reduces prefetching but does not remove the experience. The
+  // phone encodes are already much lighter; users who explicitly ask for less
+  // motion still receive the static version through prefers-reduced-motion.
+  let stillsOnly = reduce;
   const SECTIONS = config.sections || [];
   const CONNECTORS = config.connectors || [];
   const CONNECTORS_M = config.connectorsMobile || [];
@@ -300,10 +303,11 @@ function mountScrollWorld(container, config) {
         s.el.appendChild(v); s.video = v; s.hasClip = true;
     }
 
-    // `fetch(file://...)` is blocked by Chromium's opaque local-file origin. The
-    // client reviews this project directly from index.html, so use the native video
-    // URL in that mode; hosted pages keep the blob path for reliable seekability.
-    if (window.location.protocol === 'file:') {
+    // Phones must not wait for a complete multi-megabyte Blob before the first
+    // frame can move. The hosted files support byte ranges, so native video lets
+    // Safari/Chrome fetch only the portions needed by the current scroll position.
+    // Desktop keeps the Blob path for the most deterministic frame scrubbing.
+    if (window.location.protocol === 'file:' || phoneClass) {
       attachVideo(url);
       return;
     }
@@ -340,8 +344,13 @@ function mountScrollWorld(container, config) {
       // at the exact seam.
       s.el.style.zIndex = String(100 + i);
       if (!s.hasClip || !s.ready) {
-        const sc = reduce ? 1 : 1.03 + local * 0.14;
-        s.img.style.transform = `translateX(${stageX - 2}vw) scale(${sc.toFixed(3)})`;
+        // While a clip is loading (or when the OS cannot decode it), keep the
+        // scroll visibly alive with a restrained, direction-changing camera move.
+        const dir = (s.si % 2 === 0) ? 1 : -1;
+        const panX = reduce ? 0 : stageX - 2 + dir * (local - 0.5) * 5;
+        const panY = reduce ? 0 : (0.5 - local) * 2;
+        const sc = reduce ? 1 : 1.035 + local * 0.125;
+        s.img.style.transform = `translate3d(${panX.toFixed(2)}vw, ${panY.toFixed(2)}vh, 0) scale(${sc.toFixed(3)})`;
       }
     }
 
@@ -413,11 +422,11 @@ function mountScrollWorld(container, config) {
   let userReady = false;
   function primeVideo(v) {
     if (!isMobile() || !v) return;
-    // A muted, playsinline play() that REJECTS on a user gesture means the OS is
-    // blocking video — in practice iOS Low Power Mode, where currentTime scrubbing
-    // doesn't work either. Fall back to stills for the whole page instead of showing
-    // frozen/blank scenes.
-    try { const p = v.play(); if (p && p.then) p.then(() => { try { v.pause(); } catch (e) {} }).catch(() => { enterStillsMode(); }); }
+    // A play() rejection can be transient while metadata is still arriving. It
+    // must not disable every animation on the page; the seek loop can still work
+    // once the individual clip becomes ready.
+    if (v.readyState < 1) return;
+    try { const p = v.play(); if (p && p.then) p.then(() => { try { v.pause(); } catch (e) {} }).catch(() => {}); }
     catch (e) {}
   }
   function onFirstGesture() {

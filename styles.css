@@ -785,6 +785,9 @@ em.o { font-style: italic; color: var(--orange); }
 .store-card__name { color: var(--orange-700) !important; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
 .store-card p { font-size: 1.03rem; }
 .store-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; margin-top: 8px; }
+.store-hours { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.store-hours p { padding: 14px 16px; background: var(--cream); border: 1px solid var(--line); border-radius: 12px; font-size: .92rem; }
+.text-link--light { display: block; margin-top: 20px; color: #fff; }
 
 /* Footer */
 .site-footer { padding: clamp(56px, 7vw, 88px) 0 28px; color: #e9dac9; background: #21150d; }
@@ -838,6 +841,7 @@ em.o { font-style: italic; color: var(--orange); }
 }
 
 @media (max-width: 700px) {
+  .store-hours { grid-template-columns: 1fr; }
   .section-intro h2,
   .ingredient-story h2,
   .dry-cakes h2,

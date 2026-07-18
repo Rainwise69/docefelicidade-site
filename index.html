@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Doce Felicidade — Doçaria artesanal em Alvaiázere | Doces de chícharo e bolos de festa</title>
-  <meta name="description" content="Os doces da Capital do Chícharo. Doçaria artesanal de Alvaiázere desde 2014 — pastel e travesseiro de chícharo, flor de chícharo, bolos secos e bolos de festa por encomenda. Encomendas por WhatsApp." />
+  <title>Doce Felicidade | Pastéis de Chícharo em Alvaiázere</title>
+  <meta name="description" content="Pastéis, travesseiros e flores de chícharo feitos artesanalmente em Alvaiázere. Bolos secos e bolos de festa por encomenda." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
   <link rel="canonical" href="https://docefelicidade.pt/" />
   <meta property="og:title" content="Doce Felicidade — Os doces da Capital do Chícharo" />
   <meta property="og:description" content="Doçaria artesanal de Alvaiázere desde 2014 — chícharo, travesseiros e bolos de festa por encomenda." />
@@ -12,6 +13,12 @@
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="pt_PT" />
   <meta property="og:url" content="https://docefelicidade.pt/" />
+  <meta property="og:image:width" content="2048" />
+  <meta property="og:image:height" content="1152" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Doce Felicidade | Pastéis de Chícharo em Alvaiázere" />
+  <meta name="twitter:description" content="Doçaria artesanal de Alvaiázere: especialidades de chícharo, bolos secos e bolos de festa por encomenda." />
+  <meta name="twitter:image" content="https://docefelicidade.pt/imagens/especialidades-trio.webp" />
   <link rel="icon" type="image/png" href="imagens/favicon.png" />
   <link rel="preload" as="image" href="assets/scroll-world/terra-poster.webp" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -22,6 +29,7 @@
   {
     "@context": "https://schema.org",
     "@type": "Bakery",
+    "@id": "https://docefelicidade.pt/#loja",
     "name": "Doce Felicidade",
     "url": "https://docefelicidade.pt/",
     "image": "https://docefelicidade.pt/imagens/logo.png",
@@ -38,6 +46,22 @@
       "addressRegion": "Leiria",
       "addressCountry": "PT"
     },
+    "areaServed": ["Cabaços", "Alvaiázere", "Leiria"],
+    "hasMap": "https://www.google.com/maps/search/?api=1&query=Rua%20dos%20Correios%2032%2C%203250-359%20Caba%C3%A7os%2C%20Alvai%C3%A1zere",
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "opens": "07:30",
+        "closes": "19:00"
+      },
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Sunday", "Monday"],
+        "opens": "07:30",
+        "closes": "13:00"
+      }
+    ],
     "sameAs": [
       "https://www.facebook.com/profile.php?id=100057396890422",
       "https://www.instagram.com/doce.felicidade.2014/"
@@ -101,27 +125,29 @@
 
         <div class="signature-grid">
           <article class="signature-card">
-            <img src="imagens/pastel-fiel.webp" alt="Pastel de chícharo em três perspetivas" loading="lazy" />
+            <img src="imagens/pastel-fiel.webp" alt="Pastel de chícharo em três perspetivas" width="2048" height="1152" loading="lazy" />
             <div class="signature-card__body">
               <span class="product-number">01</span>
               <h3>Pastel de Chícharo</h3>
               <p>Massa folhada dourada, açúcar em pó e recheio cremoso de chícharo. Estaladiço por fora, macio por dentro.</p>
               <span class="availability">Preço no balcão e por encomenda</span>
+              <a class="text-link" href="pastel-de-chicharo/">Conhecer o pastel de chícharo →</a>
             </div>
           </article>
 
           <article class="signature-card">
-            <img src="imagens/travesseiro-1.jpg" alt="Travesseiro de chícharo" loading="lazy" />
+            <img src="imagens/travesseiro-1.jpg" alt="Travesseiro de chícharo" width="1600" height="893" loading="lazy" />
             <div class="signature-card__body">
               <span class="product-number">02</span>
               <h3>Travesseiro de Chícharo</h3>
               <p>Formato comprido, massa fina e crocante, com o recheio de chícharo que identifica a casa.</p>
               <span class="availability">Um dos mais pedidos</span>
+              <a class="text-link" href="travesseiro-de-chicharo/">Conhecer o travesseiro →</a>
             </div>
           </article>
 
           <article class="signature-card">
-            <img src="imagens/flor-de-chicharo-1.jpg" alt="Flor de chícharo" loading="lazy" />
+            <img src="imagens/flor-de-chicharo-1.jpg" alt="Flor de chícharo" width="1600" height="893" loading="lazy" />
             <div class="signature-card__body">
               <span class="product-number">03</span>
               <h3>Flor de Chícharo</h3>
@@ -138,7 +164,7 @@
 
         <article class="ingredient-story" id="chicharo">
           <div class="ingredient-story__image">
-            <img src="imagens/chicharo-2.jpg" alt="Chícharo, a leguminosa tradicional de Alvaiázere" loading="lazy" />
+            <img src="imagens/chicharo-2.jpg" alt="Chícharo, a leguminosa tradicional de Alvaiázere" width="1600" height="893" loading="lazy" />
           </div>
           <div class="ingredient-story__copy">
             <span class="eyebrow">O ingrediente da terra</span>
@@ -156,15 +182,15 @@
         <div class="dry-cakes__media">
           <div class="product-gallery product-gallery--dry" aria-label="Galeria de bolos secos">
             <button class="product-gallery__main" type="button" data-lightbox data-gallery="bolos-secos" data-full="imagens/bolos-secos-card.jpg" data-cap="Seleção de bolos secos da Doce Felicidade">
-              <img src="imagens/bolos-secos-card.jpg" alt="Seleção de bolos secos da Doce Felicidade" loading="lazy" />
+              <img src="imagens/bolos-secos-card.jpg" alt="Seleção de bolos secos da Doce Felicidade" width="510" height="880" loading="lazy" />
               <span>Ver galeria · 3 fotografias</span>
             </button>
             <button type="button" data-lightbox data-gallery="bolos-secos" data-full="imagens/bolos-secos-1.jpg" data-cap="Bolos secos em embalagem Doce Felicidade">
-              <img src="imagens/bolos-secos-1.jpg" alt="Várias embalagens de bolos secos" loading="lazy" />
+              <img src="imagens/bolos-secos-1.jpg" alt="Várias embalagens de bolos secos" width="1600" height="893" loading="lazy" />
               <span>Embalagens</span>
             </button>
             <button type="button" data-lightbox data-gallery="bolos-secos" data-full="imagens/bolos-secos-2.jpg" data-cap="Variedades de bolos secos">
-              <img src="imagens/bolos-secos-2.jpg" alt="Diferentes variedades de bolos secos" loading="lazy" />
+              <img src="imagens/bolos-secos-2.jpg" alt="Diferentes variedades de bolos secos" width="1600" height="893" loading="lazy" />
               <span>Variedades</span>
             </button>
           </div>
@@ -183,6 +209,7 @@
             <li><strong>Alfarroba</strong><span>profundo e naturalmente doce</span></li>
             <li><strong>Canela</strong><span>clássico e perfumado</span></li>
           </ul>
+          <a class="text-link" href="bolos-secos/">Ver os bolos secos e as variedades →</a>
         </div>
       </div>
     </section>
@@ -200,19 +227,20 @@
             <li><strong>Ideia</strong><span>Envie uma referência ou descreva o tema.</span></li>
           </ul>
           <a class="btn btn--light btn--lg" href="https://wa.me/351917979657?text=Ol%C3%A1!%20Queria%20pedir%20or%C3%A7amento%20para%20um%20bolo%20de%20festa.%0AData%3A%20%0AN%C2%BA%20de%20pessoas%3A%20%0AIdeia%3A%20" target="_blank" rel="noopener">Pedir orçamento por WhatsApp</a>
+          <a class="text-link text-link--light" href="bolos-de-festa/">Ver exemplos e como encomendar →</a>
         </div>
         <div class="celebration__media">
           <div class="product-gallery product-gallery--cakes" aria-label="Galeria de bolos de festa">
             <button class="product-gallery__main" type="button" data-lightbox data-gallery="bolos-festa" data-full="imagens/bolo-festa.jpg" data-cap="Bolo personalizado para aniversário">
-              <img src="imagens/bolo-festa.jpg" alt="Bolo personalizado para aniversário" loading="lazy" />
+              <img src="imagens/bolo-festa.jpg" alt="Bolo personalizado para aniversário" width="781" height="1400" loading="lazy" />
               <span>Ver galeria · 3 bolos</span>
             </button>
             <button type="button" data-lightbox data-gallery="bolos-festa" data-full="imagens/aniversario-2.jpg" data-cap="Bolo personalizado com tema de balão">
-              <img src="imagens/aniversario-2.jpg" alt="Bolo personalizado com tema de balão" loading="lazy" />
+              <img src="imagens/aniversario-2.jpg" alt="Bolo personalizado com tema de balão" width="781" height="1400" loading="lazy" />
               <span>Aniversários</span>
             </button>
             <button type="button" data-lightbox data-gallery="bolos-festa" data-full="imagens/aniversario-3.jpg" data-cap="Bolo de casamento com frutos vermelhos">
-              <img src="imagens/aniversario-3.jpg" alt="Bolo de casamento com frutos vermelhos" loading="lazy" />
+              <img src="imagens/aniversario-3.jpg" alt="Bolo de casamento com frutos vermelhos" width="781" height="1400" loading="lazy" />
               <span>Casamentos</span>
             </button>
           </div>
@@ -260,31 +288,31 @@
         </header>
         <div class="gallery-grid">
           <figure class="gallery-item gallery-item--wide" data-lightbox data-gallery="galeria-geral" data-full="imagens/especialidades-trio.webp" data-cap="Pastel, travesseiro e flor de chícharo">
-            <img src="imagens/especialidades-trio.webp" alt="Pastel, travesseiro e flor de chícharo" loading="lazy" />
+            <img src="imagens/especialidades-trio.webp" alt="Pastel, travesseiro e flor de chícharo" width="2048" height="1152" loading="lazy" />
             <figcaption>As três especialidades</figcaption>
           </figure>
           <figure class="gallery-item gallery-item--wide" data-lightbox data-gallery="galeria-geral" data-full="imagens/bastidores-1.jpg" data-cap="Massa trabalhada à mão">
-            <img src="imagens/bastidores-1.jpg" alt="Mãos a trabalhar a massa artesanalmente" loading="lazy" />
+            <img src="imagens/bastidores-1.jpg" alt="Mãos a trabalhar a massa artesanalmente" width="1600" height="1073" loading="lazy" />
             <figcaption>Massa trabalhada à mão</figcaption>
           </figure>
           <figure class="gallery-item" data-lightbox data-gallery="galeria-geral" data-full="imagens/travesseiro-2.jpg" data-cap="Travesseiro de chícharo">
-            <img src="imagens/travesseiro-2.jpg" alt="Travesseiro de chícharo" loading="lazy" />
+            <img src="imagens/travesseiro-2.jpg" alt="Travesseiro de chícharo" width="1600" height="893" loading="lazy" />
             <figcaption>Travesseiro de chícharo</figcaption>
           </figure>
           <figure class="gallery-item" data-lightbox data-gallery="galeria-geral" data-full="imagens/flor-de-chicharo-2.jpg" data-cap="Flor de chícharo">
-            <img src="imagens/flor-de-chicharo-2.jpg" alt="Flor de chícharo" loading="lazy" />
+            <img src="imagens/flor-de-chicharo-2.jpg" alt="Flor de chícharo" width="1600" height="893" loading="lazy" />
             <figcaption>Flor de chícharo</figcaption>
           </figure>
           <figure class="gallery-item" data-lightbox data-gallery="galeria-geral" data-full="imagens/chicharo-2.jpg" data-cap="Chícharo de Alvaiázere">
-            <img src="imagens/chicharo-2.jpg" alt="Chícharo de Alvaiázere" loading="lazy" />
+            <img src="imagens/chicharo-2.jpg" alt="Chícharo de Alvaiázere" width="1600" height="893" loading="lazy" />
             <figcaption>O chícharo da nossa terra</figcaption>
           </figure>
           <figure class="gallery-item gallery-item--wide" data-lightbox data-gallery="galeria-geral" data-full="imagens/finalizados-pastel-chicharo.jpg" data-cap="Pastéis de chícharo finalizados à mão">
-            <img src="imagens/finalizados-pastel-chicharo.jpg" alt="Pastéis de chícharo a receber açúcar em pó, finalizados à mão" loading="lazy" />
+            <img src="imagens/finalizados-pastel-chicharo.jpg" alt="Pastéis de chícharo a receber açúcar em pó, finalizados à mão" width="1760" height="1328" loading="lazy" />
             <figcaption>Finalizados à mão</figcaption>
           </figure>
           <figure class="gallery-item gallery-item--wide" data-lightbox data-gallery="galeria-geral" data-full="imagens/ingredientes-chicharo.jpg" data-cap="Chícharo e ingredientes da nossa produção">
-            <img src="imagens/ingredientes-chicharo.jpg" alt="Chícharo, farinha, ovos, açúcar e manteiga usados na produção" loading="lazy" />
+            <img src="imagens/ingredientes-chicharo.jpg" alt="Chícharo, farinha, ovos, açúcar e manteiga usados na produção" width="1760" height="1328" loading="lazy" />
             <figcaption>Ingredientes da nossa produção</figcaption>
           </figure>
         </div>
@@ -295,7 +323,7 @@
     <section class="about" id="sobre">
       <div class="wrap about__layout">
         <div class="about__media">
-          <img src="imagens/bastidores-1.jpg" alt="Mãos a trabalhar a massa na oficina" loading="lazy" />
+          <img src="imagens/bastidores-1.jpg" alt="Mãos a trabalhar a massa na oficina" width="1600" height="1073" loading="lazy" />
         </div>
         <div class="about__copy">
           <span class="eyebrow">Uma família de Cabaços</span>
@@ -327,7 +355,7 @@
     <!-- ===== 09 · VISITE-NOS ===== -->
     <section class="store" id="visitar">
       <div class="store__photo">
-        <img src="imagens/exterior-loja.jpg" alt="Exterior real da loja Doce Felicidade em Cabaços" loading="lazy" />
+        <img src="imagens/exterior-loja.jpg" alt="Exterior real da loja Doce Felicidade em Cabaços" width="1600" height="1069" loading="lazy" />
       </div>
       <div class="wrap store__card-wrap">
         <address class="store-card">
@@ -335,6 +363,10 @@
           <h2>Venha visitar-<em>nos.</em></h2>
           <p class="store-card__name">Doce Felicidade</p>
           <p><strong>Rua dos Correios, n.º 32</strong><br />3250-359 Cabaços, Alvaiázere</p>
+          <div class="store-hours">
+            <p><strong>Terça a sábado</strong><br /><time datetime="07:30">07:30</time>–<time datetime="19:00">19:00</time></p>
+            <p><strong>Domingo e segunda</strong><br /><time datetime="07:30">07:30</time>–<time datetime="13:00">13:00</time></p>
+          </div>
           <p><a href="tel:+351917979657">917 979 657</a><br /><a href="mailto:docefelicidade.2014@gmail.com">docefelicidade.2014@gmail.com</a></p>
           <div class="store-card__actions">
             <a class="btn btn--primary" href="https://www.google.com/maps/search/?api=1&query=Rua%20dos%20Correios%2032%2C%203250-359%20Caba%C3%A7os%2C%20Alvai%C3%A1zere" target="_blank" rel="noopener">Abrir no Google Maps</a>
@@ -349,15 +381,15 @@
   <footer class="site-footer">
     <div class="wrap site-footer__grid">
       <div class="site-footer__brand">
-        <img src="imagens/logo.png" alt="Doce Felicidade" />
+        <img src="imagens/logo.png" alt="Doce Felicidade" width="640" height="453" />
         <div><strong>Doce Felicidade</strong><span>Doçaria artesanal · Cabaços · desde 2014</span></div>
       </div>
       <nav class="site-footer__links" aria-label="Rodapé">
-        <a href="#especialidades">Especialidades</a>
-        <a href="#bolos-secos">Bolos secos</a>
-        <a href="#festas">Bolos de festa</a>
-        <a href="#cafes-e-lojas">Cafés e lojas</a>
-        <a href="#visitar">Visite-nos</a>
+      <a href="pastel-de-chicharo/">Pastel de chícharo</a>
+      <a href="travesseiro-de-chicharo/">Travesseiro</a>
+      <a href="bolos-secos/">Bolos secos</a>
+      <a href="bolos-de-festa/">Bolos de festa</a>
+      <a href="lojas/">Visite-nos</a>
       </nav>
       <div class="site-footer__contact">
         <a href="tel:+351917979657">917 979 657</a>

@@ -280,6 +280,17 @@ function mountScrollWorld(container, config) {
     read();
   }
 
+  function releaseClip(s) {
+    if (!phoneClass || !s.video) return;
+    const v = s.video;
+    try { v.pause(); } catch (e) {}
+    try { v.removeAttribute('src'); v.load(); } catch (e) {}
+    v.remove();
+    s.el.classList.remove('has-clip');
+    s.video = null; s.hasClip = false; s.ready = false; s.loading = false;
+    s.cur = s.target;
+  }
+
   function loadClip(s) {
     if (stillsOnly || s.loading || !s.clip) return;
     s.loading = true;
@@ -322,9 +333,19 @@ function mountScrollWorld(container, config) {
     let ci = 0;
     for (let i = 0; i < NSEG; i++) if (y >= SEGMENTS[i].start) ci = i;
 
+    // Mobile Safari has a small decoder budget. Retaining every scrub video makes
+    // the first scenes work and the later ones freeze on their posters. Keep only
+    // the active segment and its immediate neighbours; released clips reload if
+    // the visitor scrolls back.
+    if (phoneClass) {
+      for (let i = 0; i < NSEG; i++) {
+        if (i < ci - 1 || i > ci + 1) releaseClip(SEGMENTS[i]);
+      }
+    }
+
     // On a slow connection (Chromium signal only) shrink the prefetch window: fetch the
     // clip you're in, not the neighbourhood. Everyone else prefetches ±1.6 viewports.
-    const lookahead = slowNet ? 0.4 : 1.6;
+    const lookahead = phoneClass ? 0.65 : (slowNet ? 0.4 : 1.6);
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
       if (y > s.start - lookahead * vh && y < s.end + lookahead * vh) loadClip(s);

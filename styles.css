@@ -850,25 +850,83 @@ em.o { font-style: italic; color: var(--orange); }
   .about h2,
   .store-card h2 { font-size: clamp(2.35rem, 12vw, 3.5rem); }
   .signature-card { display: block; }
-  .signature-card--pastel-trio > img {
+  .signature-card > img {
     aspect-ratio: 16 / 9;
-    object-fit: contain;
-    object-position: center;
+    object-fit: cover;
+  }
+  .signature-card--pastel-solo > img {
+    object-position: center 52%;
   }
   .signature-card__body { min-height: 0; }
   .availability { margin-top: 24px; }
   .order-bar { align-items: stretch; flex-direction: column; }
   .order-bar .btn { justify-content: center; white-space: normal; text-align: center; }
-  .ingredient-story__image img { min-height: 320px; }
+  .ingredient-story__image img {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
   .flavour-list { grid-template-columns: 1fr; }
   .service-points li { grid-template-columns: 84px 1fr; }
   .trade-cta { align-items: flex-start; flex-direction: column; }
   .proof-band__grid { grid-template-columns: 1fr; }
   .proof-band__grid > * { padding: 24px 0; border-top: 1px solid rgba(255,255,255,.15); border-left: 0; }
   .proof-band__grid > *:first-child { border-top: 0; }
+  .product-gallery--dry,
+  .product-gallery--cakes {
+    display: flex;
+    gap: 12px;
+    aspect-ratio: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 10px;
+    border-radius: 0;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,.65) transparent;
+  }
+  .product-gallery--dry button,
+  .product-gallery--cakes button,
+  .product-gallery--dry .product-gallery__main,
+  .product-gallery--cakes .product-gallery__main {
+    flex: 0 0 88%;
+    grid-column: auto;
+    grid-row: auto;
+    aspect-ratio: 16 / 10;
+    scroll-snap-align: center;
+  }
+  .product-gallery button img,
+  .dry-cakes__media .product-gallery button img,
+  .celebration__media .product-gallery button img {
+    object-fit: contain;
+  }
+  .product-gallery--dry button { background: #37271a; }
+  .product-gallery--cakes button { background: #d97700; }
+  .gallery-grid {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 12px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: var(--orange) var(--cream);
+  }
   .gallery-item,
-  .gallery-item--wide { grid-column: span 12; }
-  .about__media img { aspect-ratio: 4 / 3; }
+  .gallery-item--wide {
+    flex: 0 0 86%;
+    grid-column: auto;
+    scroll-snap-align: center;
+  }
+  .gallery-item img {
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: contain;
+    background: var(--cream-2);
+  }
+  .about__media img { aspect-ratio: 16 / 9; }
   .order-steps li { grid-template-columns: 54px 1fr; padding: 24px 20px; }
   .store__photo img { height: 430px; }
   .store__card-wrap { margin-top: -54px; }

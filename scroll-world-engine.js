@@ -99,7 +99,7 @@ function mountScrollWorld(container, config) {
   // has a desktop-class screen and decoder — it gets the 1080p master, with the touch
   // hardening above still on. screen.* is stable across rotation and window resizes;
   // a phone's short side is ≤ ~500 CSS px, tablets start at 744.
-  const phoneClass = Math.min(screen.width, screen.height) <= 600;
+  const phoneClass = Math.min(screen.width, screen.height) <= 600 || window.innerWidth <= 600;
   // Network signals are Chromium-only (iOS/Safari/Firefox expose nothing) — treat them
   // strictly as a *downgrade* signal on top of a conservative default, never as a gate
   // for the good experience.

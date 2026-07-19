@@ -188,9 +188,17 @@ function mountScrollWorld(container, config) {
   const hint = el('div', 'sw-hint');
   const hintText = el('span'); hintText.textContent = config.hint || 'scroll'; hint.appendChild(hintText);
   hint.appendChild(el('i'));
+  const motionGate = phoneClass ? el('button', 'sw-motion-gate') : null;
+  if (motionGate) {
+    motionGate.type = 'button';
+    motionGate.textContent = 'Ativar animação';
+    motionGate.setAttribute('aria-label', 'Ativar a animação controlada pelo scroll');
+  }
   const track = el('div', 'sw-track');
 
-  [sky, scrollbar, topbar, stage, copylayer, route, hint, track].forEach(n => container.appendChild(n));
+  [sky, scrollbar, topbar, stage, copylayer, route, hint].forEach(n => container.appendChild(n));
+  if (motionGate) container.appendChild(motionGate);
+  container.appendChild(track);
 
   // segment scenes
   SEGMENTS.forEach(s => {
@@ -309,7 +317,10 @@ function mountScrollWorld(container, config) {
         // Reveal the video (hide the still poster) only once a real frame has
         // painted — on iOS a seeked-but-never-played muted video stays blank, so
         // hiding the still on metadata alone would flash an empty scene.
-        const revealVideo = () => { s.el.classList.add('has-clip'); };
+        const revealVideo = () => {
+          s.el.classList.add('has-clip');
+          if (motionGate) motionGate.hidden = true;
+        };
         v.addEventListener('seeked', revealVideo, { once: true });
         v.addEventListener('playing', revealVideo, { once: true });
         v.addEventListener('timeupdate', revealVideo, { once: true });
@@ -422,6 +433,10 @@ function mountScrollWorld(container, config) {
     // normal page sections that follow.
     copylayer.style.opacity = worldChrome;
     copylayer.style.visibility = worldChrome <= 0.001 ? 'hidden' : 'visible';
+    if (motionGate && !motionGate.hidden) {
+      motionGate.style.opacity = worldChrome;
+      motionGate.style.visibility = worldChrome <= 0.001 ? 'hidden' : 'visible';
+    }
     if (particles) particles.style.opacity = worldChrome;
     ticking = false;
   }
@@ -460,6 +475,7 @@ function mountScrollWorld(container, config) {
       try { v.pause(); } catch (e) {}
       v.dataset.swPrimed = '1';
       v._swPrimePending = false;
+      if (motionGate) motionGate.hidden = true;
     };
     try {
       const p = v.play();
@@ -473,11 +489,20 @@ function mountScrollWorld(container, config) {
     userReady = true;
     SEGMENTS.forEach(s => primeVideo(s.video));
   }
+  function enableMotion() {
+    userReady = true;
+    if (stillsOnly) {
+      stillsOnly = false;
+      read();
+    }
+    SEGMENTS.forEach(s => primeVideo(s.video));
+  }
   // Keep listening until every newly-loaded clip has been primed. On a real phone
   // the first touch often arrives before metadata; a one-shot listener would then
   // consume the only Safari media gesture and leave all later frames frozen.
   window.addEventListener('pointerdown', onGesture, { passive: true });
   window.addEventListener('touchstart', onGesture, { passive: true });
+  if (motionGate) motionGate.addEventListener('click', enableMotion);
 
   // Particles are a per-frame cost we can't afford alongside video scrubbing on a phone.
   seedParticles(particles, reduce || coarse || config.atmosphere === false);
@@ -588,6 +613,9 @@ function injectCSS() {
   .sw-hint{position:fixed;left:50%;bottom:26px;z-index:30;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:var(--sw-ink-soft);transition:opacity .3s;}
   .sw-hint i{width:22px;height:34px;border-radius:12px;border:2px solid color-mix(in srgb,var(--sw-ink) 28%,transparent);position:relative;}
   .sw-hint i::after{content:"";position:absolute;left:50%;top:7px;width:4px;height:7px;border-radius:2px;background:var(--sw-accent);transform:translateX(-50%);animation:sw-wheel 1.7s ease-in-out infinite;}
+  .sw-motion-gate{position:fixed;z-index:55;top:calc(82px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:10px 16px;border:1px solid color-mix(in srgb,var(--sw-accent) 38%,transparent);border-radius:999px;background:color-mix(in srgb,#fff 88%,transparent);box-shadow:0 8px 24px rgba(52,31,13,.16);backdrop-filter:blur(10px);color:var(--sw-ink);font:700 .78rem/1 var(--sw-font-body);letter-spacing:.04em;white-space:nowrap;cursor:pointer;pointer-events:auto;}
+  .sw-motion-gate::before{content:"▶";margin-right:7px;color:var(--sw-accent);}
+  .sw-motion-gate[hidden]{display:none;}
   @keyframes sw-wheel{0%{opacity:0;top:6px}40%{opacity:1}100%{opacity:0;top:17px}}
   .sw-track{position:relative;z-index:1;width:100%;pointer-events:none;}
   @media (max-width:860px){

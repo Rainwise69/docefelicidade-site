@@ -309,7 +309,10 @@ function mountScrollWorld(container, config) {
         // Reveal the video (hide the still poster) only once a real frame has
         // painted — on iOS a seeked-but-never-played muted video stays blank, so
         // hiding the still on metadata alone would flash an empty scene.
-        v.addEventListener('seeked', () => { s.el.classList.add('has-clip'); }, { once: true });
+        const revealVideo = () => { s.el.classList.add('has-clip'); };
+        v.addEventListener('seeked', revealVideo, { once: true });
+        v.addEventListener('playing', revealVideo, { once: true });
+        v.addEventListener('timeupdate', revealVideo, { once: true });
         v.addEventListener('loadeddata', () => { try { v.pause(); } catch (e) {} if (userReady) primeVideo(v); });
         s.el.appendChild(v); s.video = v; s.hasClip = true;
     }
@@ -451,17 +454,30 @@ function mountScrollWorld(container, config) {
     // A play() rejection can be transient while metadata is still arriving. It
     // must not disable every animation on the page; the seek loop can still work
     // once the individual clip becomes ready.
-    if (v.readyState < 1) return;
-    try { const p = v.play(); if (p && p.then) p.then(() => { try { v.pause(); } catch (e) {} }).catch(() => {}); }
-    catch (e) {}
+    if (v.readyState < 1 || v.dataset.swPrimed === '1' || v._swPrimePending) return;
+    v._swPrimePending = true;
+    const finishPrime = () => {
+      try { v.pause(); } catch (e) {}
+      v.dataset.swPrimed = '1';
+      v._swPrimePending = false;
+    };
+    try {
+      const p = v.play();
+      if (p && p.then) {
+        p.then(() => requestAnimationFrame(finishPrime))
+          .catch(() => { v._swPrimePending = false; });
+      } else requestAnimationFrame(finishPrime);
+    } catch (e) { v._swPrimePending = false; }
   }
-  function onFirstGesture() {
-    if (userReady) return;
+  function onGesture() {
     userReady = true;
     SEGMENTS.forEach(s => primeVideo(s.video));
   }
-  window.addEventListener('pointerdown', onFirstGesture, { once: true, passive: true });
-  window.addEventListener('touchstart', onFirstGesture, { once: true, passive: true });
+  // Keep listening until every newly-loaded clip has been primed. On a real phone
+  // the first touch often arrives before metadata; a one-shot listener would then
+  // consume the only Safari media gesture and leave all later frames frozen.
+  window.addEventListener('pointerdown', onGesture, { passive: true });
+  window.addEventListener('touchstart', onGesture, { passive: true });
 
   // Particles are a per-frame cost we can't afford alongside video scrubbing on a phone.
   seedParticles(particles, reduce || coarse || config.atmosphere === false);

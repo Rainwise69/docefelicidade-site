@@ -121,6 +121,7 @@ function mountScrollWorld(container, config) {
   const CROSSFADE = (config.crossfade != null) ? config.crossfade : 0.12;  // seam dissolve width (vh)
   const EXIT_HOLD = 0.18;
   const EXIT_FADE = 0.32;
+  const SEEK_STALL_MS = 700;   // how long to trust a pending seek before re-issuing it
   const EXIT_RUNWAY = EXIT_HOLD + EXIT_FADE;
   // Optional per-story-seam widths. This project uses a longer editorial dissolve
   // for the final community→products handoff, where there is intentionally no connector.
@@ -188,17 +189,9 @@ function mountScrollWorld(container, config) {
   const hint = el('div', 'sw-hint');
   const hintText = el('span'); hintText.textContent = config.hint || 'scroll'; hint.appendChild(hintText);
   hint.appendChild(el('i'));
-  const motionGate = phoneClass ? el('button', 'sw-motion-gate') : null;
-  if (motionGate) {
-    motionGate.type = 'button';
-    motionGate.textContent = 'Ativar animação';
-    motionGate.setAttribute('aria-label', 'Ativar a animação controlada pelo scroll');
-  }
   const track = el('div', 'sw-track');
 
-  [sky, scrollbar, topbar, stage, copylayer, route, hint].forEach(n => container.appendChild(n));
-  if (motionGate) container.appendChild(motionGate);
-  container.appendChild(track);
+  [sky, scrollbar, topbar, stage, copylayer, route, hint, track].forEach(n => container.appendChild(n));
 
   // segment scenes
   SEGMENTS.forEach(s => {
@@ -216,6 +209,7 @@ function mountScrollWorld(container, config) {
     scene.appendChild(img); stage.appendChild(scene);
     s.el = scene; s.img = img; s.video = null; s.hasClip = false;
     s.loading = false; s.ready = false; s.cur = 0; s.target = 0; s.visible = false;
+    s.seekAt = 0;
   });
 
   // per-section copy / route / nav
@@ -317,14 +311,16 @@ function mountScrollWorld(container, config) {
         // Reveal the video (hide the still poster) only once a real frame has
         // painted — on iOS a seeked-but-never-played muted video stays blank, so
         // hiding the still on metadata alone would flash an empty scene.
-        const revealVideo = () => {
-          s.el.classList.add('has-clip');
-          if (motionGate) motionGate.hidden = true;
-        };
+        const revealVideo = () => { s.el.classList.add('has-clip'); };
         v.addEventListener('seeked', revealVideo, { once: true });
         v.addEventListener('playing', revealVideo, { once: true });
         v.addEventListener('timeupdate', revealVideo, { once: true });
-        v.addEventListener('loadeddata', () => { try { v.pause(); } catch (e) {} if (userReady) primeVideo(v); });
+        // Prime as soon as the clip has data, without waiting for a gesture: a
+        // muted + playsinline video is allowed to autoplay, so the scene is live
+        // from the moment the page opens. At the top of the page target is 0, so
+        // the seek loop never issues a currentTime — without this the first scene
+        // would sit on its poster until the visitor scrolled past it.
+        v.addEventListener('loadeddata', () => { try { v.pause(); } catch (e) {} primeVideo(v); });
         s.el.appendChild(v); s.video = v; s.hasClip = true;
     }
 
@@ -343,6 +339,10 @@ function mountScrollWorld(container, config) {
   }
 
   function read() {
+    // Released before the work, not after: if anything below ever throws, the
+    // scroll handler must still accept the next frame. Leaving `ticking` true
+    // would silently freeze the whole world until a reload.
+    ticking = false;
     const y = window.scrollY || window.pageYOffset;
     let ci = 0;
     for (let i = 0; i < NSEG; i++) if (y >= SEGMENTS[i].start) ci = i;
@@ -433,39 +433,47 @@ function mountScrollWorld(container, config) {
     // normal page sections that follow.
     copylayer.style.opacity = worldChrome;
     copylayer.style.visibility = worldChrome <= 0.001 ? 'hidden' : 'visible';
-    if (motionGate && !motionGate.hidden) {
-      motionGate.style.opacity = worldChrome;
-      motionGate.style.visibility = worldChrome <= 0.001 ? 'hidden' : 'visible';
-    }
     if (particles) particles.style.opacity = worldChrome;
-    ticking = false;
   }
 
   function raf() {
     const eps = isMobile() ? 0.02 : 0.008;   // coarser seek step on phones = fewer decodes
+    const now = performance.now();
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
       if (!s.hasClip || !s.ready || !s.video) continue;
       // Never queue a seek while the decoder is still resolving the last one.
       // On phones a fast flick would otherwise pile up seeks and freeze the clip;
       // cur keeps lerping, so we snap to the latest target the moment it's free.
-      if (s.video.seeking) continue;
+      if (s.video.seeking) {
+        if (!s.seekAt) s.seekAt = now;
+        // ...but a `seeked` that never arrives (mobile decoders do stall) would
+        // otherwise freeze this clip for the rest of the session. After a grace
+        // period, fall through and re-issue: assigning currentTime restarts the
+        // stalled seek instead of waiting on it forever.
+        if (now - s.seekAt < SEEK_STALL_MS) continue;
+      }
       if (!s.visible && Math.abs(s.cur - s.target) < 0.002) continue;
       s.cur += (s.target - s.cur) * (reduce ? 1 : 0.18);
       const dur = s.video.duration || 1;
       const t = clamp(s.cur, 0, 0.999) * dur;
-      if (Math.abs(s.video.currentTime - t) > eps) { try { s.video.currentTime = t; } catch (e) {} }
+      if (Math.abs(s.video.currentTime - t) > eps) {
+        s.seekAt = now;
+        try { s.video.currentTime = t; } catch (e) {}
+      }
     }
     requestAnimationFrame(raf);
   }
 
-  // iOS needs a user gesture before a muted video will decode/paint reliably. On the
-  // first touch we prime every loaded clip (muted play→pause) so the first seek is
-  // instant instead of showing a blank frame. `userReady` also makes freshly-loaded
-  // clips prime themselves (see loadClip).
-  let userReady = false;
+  // Each clip primes itself (muted play→pause) the moment it has data, so the world
+  // is already moving when the page opens — no tap required. Browsers that refuse
+  // the autoplay (Firefox on Android) simply keep the poster until the first touch,
+  // where onGesture retries the prime with a live user gesture.
+  // Every device, not just phones: a video that has been seeked but never played
+  // can stay unpainted in Safari and in some compositors, which is what leaves a
+  // scene showing an empty background instead of its frame.
   function primeVideo(v) {
-    if (!isMobile() || !v) return;
+    if (!v) return;
     // A play() rejection can be transient while metadata is still arriving. It
     // must not disable every animation on the page; the seek loop can still work
     // once the individual clip becomes ready.
@@ -475,7 +483,6 @@ function mountScrollWorld(container, config) {
       try { v.pause(); } catch (e) {}
       v.dataset.swPrimed = '1';
       v._swPrimePending = false;
-      if (motionGate) motionGate.hidden = true;
     };
     try {
       const p = v.play();
@@ -486,15 +493,6 @@ function mountScrollWorld(container, config) {
     } catch (e) { v._swPrimePending = false; }
   }
   function onGesture() {
-    userReady = true;
-    SEGMENTS.forEach(s => primeVideo(s.video));
-  }
-  function enableMotion() {
-    userReady = true;
-    if (stillsOnly) {
-      stillsOnly = false;
-      read();
-    }
     SEGMENTS.forEach(s => primeVideo(s.video));
   }
   // Keep listening until every newly-loaded clip has been primed. On a real phone
@@ -502,7 +500,6 @@ function mountScrollWorld(container, config) {
   // consume the only Safari media gesture and leave all later frames frozen.
   window.addEventListener('pointerdown', onGesture, { passive: true });
   window.addEventListener('touchstart', onGesture, { passive: true });
-  if (motionGate) motionGate.addEventListener('click', enableMotion);
 
   // Particles are a per-frame cost we can't afford alongside video scrubbing on a phone.
   seedParticles(particles, reduce || coarse || config.atmosphere === false);
@@ -518,7 +515,13 @@ function mountScrollWorld(container, config) {
   }
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', layout);
-  window.addEventListener('load', layout);
+  // `load` goes through the same guard: on a phone the URL bar has often already
+  // collapsed by the time the last asset lands, and relayouting on that height
+  // change alone yanks the visitor's scroll position mid-flight.
+  window.addEventListener('load', onResize);
+  // Coming back via the back button restores the page from the bfcache at its old
+  // scroll offset without firing a scroll event, so re-read the world on arrival.
+  window.addEventListener('pageshow', () => { read(); });
   layout();
   requestAnimationFrame(raf);
 
@@ -613,9 +616,6 @@ function injectCSS() {
   .sw-hint{position:fixed;left:50%;bottom:26px;z-index:30;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:var(--sw-ink-soft);transition:opacity .3s;}
   .sw-hint i{width:22px;height:34px;border-radius:12px;border:2px solid color-mix(in srgb,var(--sw-ink) 28%,transparent);position:relative;}
   .sw-hint i::after{content:"";position:absolute;left:50%;top:7px;width:4px;height:7px;border-radius:2px;background:var(--sw-accent);transform:translateX(-50%);animation:sw-wheel 1.7s ease-in-out infinite;}
-  .sw-motion-gate{position:fixed;z-index:55;top:calc(82px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:10px 16px;border:1px solid color-mix(in srgb,var(--sw-accent) 38%,transparent);border-radius:999px;background:color-mix(in srgb,#fff 88%,transparent);box-shadow:0 8px 24px rgba(52,31,13,.16);backdrop-filter:blur(10px);color:var(--sw-ink);font:700 .78rem/1 var(--sw-font-body);letter-spacing:.04em;white-space:nowrap;cursor:pointer;pointer-events:auto;}
-  .sw-motion-gate::before{content:"▶";margin-right:7px;color:var(--sw-accent);}
-  .sw-motion-gate[hidden]{display:none;}
   @keyframes sw-wheel{0%{opacity:0;top:6px}40%{opacity:1}100%{opacity:0;top:17px}}
   .sw-track{position:relative;z-index:1;width:100%;pointer-events:none;}
   @media (max-width:860px){

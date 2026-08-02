@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Diagnóstico de vídeo — Doce Felicidade</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin:0; padding:18px 16px 60px; background:#F5EDE0; color:#241d2b;
+         font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif; }
+  h1 { font-size:1.3rem; margin:0 0 4px; }
+  .sub { color:#6a6072; font-size:.88rem; margin:0 0 20px; }
+  button { font:600 1rem/1 inherit; padding:16px 22px; width:100%; border:0; border-radius:12px;
+           background:#241d2b; color:#fff; cursor:pointer; margin-bottom:18px; }
+  .row { background:#fff; border-radius:12px; padding:12px 14px; margin-bottom:9px;
+         box-shadow:0 2px 8px rgba(52,31,13,.07); }
+  .row b { display:block; font-size:.82rem; letter-spacing:.04em; text-transform:uppercase;
+           color:#8a6d3b; margin-bottom:3px; }
+  .row span { font-size:.95rem; word-break:break-word; }
+  .ok    { border-left:5px solid #2e7d32; }
+  .bad   { border-left:5px solid #c62828; }
+  .warn  { border-left:5px solid #ef6c00; }
+  .info  { border-left:5px solid #9e9e9e; }
+  #copy { background:#8a6d3b; margin-top:22px; }
+  video, canvas { display:none; }
+</style>
+</head>
+<body>
+
+<h1>Diagnóstico de vídeo</h1>
+<p class="sub">Abra esta página no telemóvel, toque no botão e envie o resultado.</p>
+
+<button id="go">Começar o teste</button>
+<div id="out"></div>
+<button id="copy" hidden>Copiar resultado</button>
+
+<script>
+(function () {
+  var out = document.getElementById('out');
+  var lines = [];
+
+  function add(label, value, cls) {
+    var d = document.createElement('div');
+    d.className = 'row ' + (cls || 'info');
+    d.innerHTML = '<b></b><span></span>';
+    d.querySelector('b').textContent = label;
+    d.querySelector('span').textContent = value;
+    out.appendChild(d);
+    lines.push(label + ': ' + value);
+  }
+
+  // Does the element hold a real, decoded frame? drawImage + pixel spread is the
+  // only check that does not depend on the compositor actually showing it.
+  function paintedFrame(v) {
+    try {
+      var c = document.createElement('canvas');
+      c.width = 32; c.height = 18;
+      var x = c.getContext('2d');
+      x.drawImage(v, 0, 0, 32, 18);
+      var d = x.getImageData(0, 0, 32, 18).data;
+      var min = 255, max = 0;
+      for (var i = 0; i < d.length; i += 4) {
+        var lum = (d[i] * 3 + d[i + 1] * 6 + d[i + 2]) / 10;
+        if (lum < min) min = lum;
+        if (lum > max) max = lum;
+      }
+      return { painted: (max - min) > 12, spread: Math.round(max - min) };
+    } catch (e) {
+      return { painted: false, spread: -1, err: e.name + ': ' + e.message };
+    }
+  }
+
+  function makeVideo(src) {
+    var v = document.createElement('video');
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.preload = 'auto';
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+    v.src = src;
+    document.body.appendChild(v);
+    return v;
+  }
+
+  function once(v, ev, ms) {
+    return new Promise(function (res) {
+      var done = false;
+      var t = setTimeout(function () { if (!done) { done = true; res(false); } }, ms);
+      v.addEventListener(ev, function () {
+        if (!done) { done = true; clearTimeout(t); res(true); }
+      }, { once: true });
+    });
+  }
+
+  function seekTo(v, t, ms) {
+    var p = once(v, 'seeked', ms);
+    try { v.currentTime = t; } catch (e) {}
+    return p;
+  }
+
+  var CLIP = 'assets/scroll-world/video/terra-m.mp4';
+
+  document.getElementById('go').addEventListener('click', function () {
+    this.disabled = true;
+    this.textContent = 'A testar…';
+    run(this);
+  });
+
+  async function run(btn) {
+    // ---- environment ----
+    add('Navegador (user agent)', navigator.userAgent);
+    add('Ecrã', screen.width + '×' + screen.height + ' css, janela ' + innerWidth + '×' + innerHeight +
+                ', dpr ' + (devicePixelRatio || 1));
+    add('Ponteiro grosseiro', matchMedia('(hover: none) and (pointer: coarse)').matches ? 'sim' : 'não');
+    add('Movimento reduzido', matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'SIM — ativo nas Definições' : 'não',
+        matchMedia('(prefers-reduced-motion: reduce)').matches ? 'bad' : 'ok');
+    var c = navigator.connection;
+    add('Poupança de dados', c ? (c.saveData ? 'SIM' : 'não') + ' (' + (c.effectiveType || '?') + ')'
+                              : 'não exposto por este browser');
+
+    // ---- 1. can the file be fetched with a byte range? ----
+    try {
+      var r = await fetch(CLIP, { headers: { Range: 'bytes=0-1023' } });
+      add('1. Pedido por intervalo (Range)',
+          'HTTP ' + r.status + (r.status === 206 ? ' — suportado' : ' — NÃO devolveu 206'),
+          r.status === 206 ? 'ok' : 'bad');
+    } catch (e) {
+      add('1. Pedido por intervalo (Range)', 'falhou: ' + e.message, 'bad');
+    }
+
+    // ---- 2. metadata ----
+    var v1 = makeVideo(CLIP);
+    var meta = await once(v1, 'loadedmetadata', 12000);
+    add('2. Metadados do vídeo',
+        meta ? 'ok — ' + v1.videoWidth + '×' + v1.videoHeight + ', ' + v1.duration.toFixed(2) + 's'
+             : 'TEMPO ESGOTADO (12s) — o vídeo não abriu',
+        meta ? 'ok' : 'bad');
+    if (!meta) { finish(btn); return; }
+
+    // ---- 3. seek WITHOUT play: does it paint? (the whole scroll effect depends on this) ----
+    var sk = await seekTo(v1, v1.duration * 0.4, 8000);
+    var p1 = paintedFrame(v1);
+    add('3. Procurar sem reproduzir',
+        (sk ? 'evento seeked ok' : 'SEM evento seeked (8s)') + ' · ' +
+        (p1.painted ? 'imagem presente' : 'IMAGEM VAZIA') + ' (variação ' + p1.spread + ')' +
+        (p1.err ? ' · ' + p1.err : ''),
+        (sk && p1.painted) ? 'ok' : 'bad');
+
+    // ---- 4. play() after a real user gesture (this handler is inside the tap) ----
+    var playErr = '';
+    var played = false;
+    try {
+      await v1.play();
+      played = true;
+    } catch (e) { playErr = e.name + ': ' + e.message; }
+    try { v1.pause(); } catch (e) {}
+    add('4. play() com toque do utilizador',
+        played ? 'permitido' : 'RECUSADO — ' + playErr,
+        played ? 'ok' : 'bad');
+
+    // ---- 5. paint after having played ----
+    await seekTo(v1, v1.duration * 0.7, 8000);
+    var p2 = paintedFrame(v1);
+    add('5. Procurar depois de reproduzir',
+        p2.painted ? 'imagem presente (variação ' + p2.spread + ')'
+                   : 'IMAGEM VAZIA (variação ' + p2.spread + ')',
+        p2.painted ? 'ok' : 'bad');
+
+    // ---- 6. went fullscreen? (playsinline ignored = kills the effect) ----
+    add('6. Ficou em ecrã inteiro',
+        (v1.webkitDisplayingFullscreen === true) ? 'SIM — playsinline ignorado' : 'não',
+        (v1.webkitDisplayingFullscreen === true) ? 'bad' : 'ok');
+
+    // ---- 7. how many videos can decode at the same time? ----
+    var extra = [], painted = 0;
+    for (var i = 0; i < 3; i++) extra.push(makeVideo(CLIP + '?n=' + i));
+    await Promise.all(extra.map(function (v) { return once(v, 'loadedmetadata', 12000); }));
+    for (var j = 0; j < extra.length; j++) {
+      try { await extra[j].play(); extra[j].pause(); } catch (e) {}
+      await seekTo(extra[j], extra[j].duration * (0.3 + j * 0.2), 8000);
+    }
+    await new Promise(function (r) { setTimeout(r, 700); });
+    var detail = [];
+    for (var k = 0; k < extra.length; k++) {
+      var p = paintedFrame(extra[k]);
+      if (p.painted) painted++;
+      detail.push('#' + (k + 1) + (p.painted ? '✓' : '✗'));
+    }
+    add('7. Vídeos em simultâneo (4 no total)',
+        (1 + painted) + ' de 4 com imagem · ' + detail.join(' '),
+        (1 + painted) >= 3 ? 'ok' : ((1 + painted) >= 2 ? 'warn' : 'bad'));
+
+    [v1].concat(extra).forEach(function (v) {
+      try { v.pause(); v.removeAttribute('src'); v.load(); v.remove(); } catch (e) {}
+    });
+
+    finish(btn);
+  }
+
+  function finish(btn) {
+    btn.textContent = 'Teste concluído';
+    var cp = document.getElementById('copy');
+    cp.hidden = false;
+    cp.addEventListener('click', function () {
+      var txt = lines.join('\n');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function () { cp.textContent = 'Copiado ✓'; },
+                                                function () { fallback(txt, cp); });
+      } else fallback(txt, cp);
+    });
+  }
+
+  function fallback(txt, cp) {
+    var ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.cssText = 'width:100%;height:220px;margin-top:10px;font-size:12px';
+    cp.parentNode.insertBefore(ta, cp.nextSibling);
+    ta.select();
+    cp.textContent = 'Selecione o texto abaixo e copie';
+  }
+})();
+</script>
+</body>
+</html>

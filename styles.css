@@ -855,11 +855,6 @@ em.o { font-style: italic; color: var(--orange); }
     aspect-ratio: 16 / 9;
     object-fit: cover;
   }
-  .signature-card--pastel-solo > img {
-    object-fit: contain;
-    object-position: center;
-    background: #f1e3d0;
-  }
   .signature-card__body { min-height: 0; }
   .availability { margin-top: 24px; }
   .order-bar { align-items: stretch; flex-direction: column; }

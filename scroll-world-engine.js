@@ -37,9 +37,23 @@
        ],
        connectors: [clipUrl, …],          // length = sections.length - 1 (nulls allowed)
        connectorsMobile: [clipUrl, …],    // optional lighter connectors for phones (same length)
+       connectorsFramesMobile: [{dir,count}, …],  // frame sequences for phones (same length)
 
-   MOBILE (the clipMobile/connectorsMobile variants are the opt-in mobile tiers;
-   the rest of the phone handling below is always on)
+   MOBILE
+     FRAME SEQUENCES (`framesMobile: { dir, count }` per section, plus
+     `connectorsFramesMobile`) — the preferred phone tier, and it WINS over
+     clipMobile wherever both are set. The scene becomes a <canvas> and the flight
+     is `count` WebP stills drawn one per scroll step, named 001.webp…NNN.webp in
+     `dir`. Use it because on iOS every browser is WebKit and a <video> only paints
+     reliably once it has been PLAYED — which each app's autoplay policy governs
+     (Firefox for iOS is stricter than Safari), so video scrubbing silently
+     degrades to a slideshow there. A canvas has no decoder, no autoplay rule, no
+     gesture requirement and no cap on concurrent elements. At 720px/q68 a sequence
+     also weighs LESS than the equivalent mp4 (see scripts/gerar-fotogramas.sh).
+     Keep clipMobile as the fallback for devices that never had the problem.
+
+     (the clipMobile/connectorsMobile variants are the opt-in video mobile tier;
+     the rest of the phone handling below is always on)
      Two independent axes, deliberately separate:
      - CLIP TIER (which file): decided by device class — screen short side ≤600 CSS px
        = phone → `clipMobile`/`posterMobile`; tablets (iPad Pro included) and desktops
@@ -116,6 +130,7 @@ function mountScrollWorld(container, config) {
   const SECTIONS = config.sections || [];
   const CONNECTORS = config.connectors || [];
   const CONNECTORS_M = config.connectorsMobile || [];
+  const CONNECTORS_FRAMES_M = config.connectorsFramesMobile || [];
   const DIVE_W = config.diveScroll || 1.3;
   const CONN_W = config.connScroll || 0.9;
   const CROSSFADE = (config.crossfade != null) ? config.crossfade : 0.12;  // seam dissolve width (vh)
@@ -140,7 +155,7 @@ function mountScrollWorld(container, config) {
   const SEGMENTS = [];
   SECTIONS.forEach((s, i) => {
     const dive = { kind: 'dive', si: i, clip: s.clip, clipM: s.clipMobile, still: s.still,
-                   poster: s.poster, posterM: s.posterMobile,
+                   poster: s.poster, posterM: s.posterMobile, framesM: s.framesMobile,
                    accent: s.accent, w: s.scroll || DIVE_W, linger: s.linger || 0,
                    fadeIn: i > 0 ? seamFade(i - 1) : CROSSFADE,
                    fadeOut: i < N - 1 ? seamFade(i) : EXIT_FADE };
@@ -153,6 +168,7 @@ function mountScrollWorld(container, config) {
       SEGMENTS.push({ kind: 'conn', si: i, clip: CONNECTORS[i], clipM: CONNECTORS_M[i],
                       still: SECTIONS[i + 1].still, poster: SECTIONS[i + 1].poster,
                       posterM: SECTIONS[i + 1].posterMobile,
+                      framesM: CONNECTORS_FRAMES_M[i],
                       accent: SECTIONS[i + 1].accent, w: CONN_W,
                       fadeIn: seamFade(i), fadeOut: seamFade(i) });
     }
@@ -210,6 +226,7 @@ function mountScrollWorld(container, config) {
     s.el = scene; s.img = img; s.video = null; s.hasClip = false;
     s.loading = false; s.ready = false; s.cur = 0; s.target = 0; s.visible = false;
     s.seekAt = 0;
+    s.canvas = null; s.ctx = null; s.frames = null; s.drawn = -1;
   });
 
   // per-section copy / route / nav
@@ -254,7 +271,7 @@ function mountScrollWorld(container, config) {
     // LONGER than desktop's for the same sequence). Override via scrollMobileFactor.
     const wf = isMobile() ? (config.scrollMobileFactor != null ? config.scrollMobileFactor : 1.2) : 1;
     let off = 0;
-    SEGMENTS.forEach(s => { s.start = off * vh; off += s.w * wf; s.end = off * vh; });
+    SEGMENTS.forEach(s => { s.start = off * vh; off += s.w * wf; s.end = off * vh; sizeCanvas(s); });
     totalW = off;
     // End the track at the exact moment the closing frame and interface finish
     // fading. This keeps the next section clean without creating a blank runway.
@@ -283,7 +300,19 @@ function mountScrollWorld(container, config) {
   }
 
   function releaseClip(s) {
-    if (!phoneClass || !s.video) return;
+    if (!phoneClass) return;
+    if (s.frames) {
+      // Dropping the Image references is what actually frees the decoded bitmaps
+      // (~1.2 MB each at 720px); the compressed bytes stay in the HTTP cache, so
+      // scrolling back re-decodes without re-downloading.
+      s.frames = null; s.drawn = -1;
+      if (s.canvas) { s.canvas.remove(); s.canvas = null; s.ctx = null; }
+      s.el.classList.remove('has-clip');
+      s.hasClip = false; s.ready = false; s.loading = false;
+      s.cur = s.target;
+      return;
+    }
+    if (!s.video) return;
     const v = s.video;
     try { v.pause(); } catch (e) {}
     try { v.removeAttribute('src'); v.load(); } catch (e) {}
@@ -293,7 +322,81 @@ function mountScrollWorld(container, config) {
     s.cur = s.target;
   }
 
+  // ---- canvas frame sequence (phones) -------------------------------------
+  // On iOS every browser is WebKit, and a <video> only paints reliably once it has
+  // been played — which depends on each app's autoplay policy (Firefox for iOS is
+  // stricter than Safari). A sequence of images drawn into a canvas has no decoder,
+  // no autoplay rule, no gesture requirement and no limit on how many can be live,
+  // so the flight behaves identically in every browser.
+  function sizeCanvas(s) {
+    if (!s.canvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = s.el.clientWidth, h = s.el.clientHeight;
+    if (!w || !h) return;
+    const nw = Math.round(w * dpr), nh = Math.round(h * dpr);
+    if (s.canvas.width === nw && s.canvas.height === nh) return;
+    const last = s.drawn;
+    // Assigning width/height wipes the canvas to opaque black, and the canvas sits
+    // on top of the poster — so repaint in the same tick, and if there is nothing
+    // to repaint yet, uncover the poster rather than leave a black rectangle.
+    s.canvas.width = nw; s.canvas.height = nh;
+    s.drawn = -1;
+    if (last < 0 || !drawFrame(s, last)) s.el.classList.remove('has-clip');
+  }
+
+  function drawFrame(s, idx) {
+    const im = s.frames && s.frames[idx];
+    if (!im || !im.complete || !im.naturalWidth || !s.ctx) return false;
+    const cw = s.canvas.width, ch = s.canvas.height;
+    if (!cw || !ch) return false;
+    // `cover`: fill the box, crop the overflow, matching the video's object-fit.
+    const ir = im.naturalWidth / im.naturalHeight, cr = cw / ch;
+    let dw, dh;
+    if (ir > cr) { dh = ch; dw = ch * ir; } else { dw = cw; dh = cw / ir; }
+    // object-position: center 44% — same framing the CSS gives the video/still, so
+    // the subject the camera dives toward stays put across the poster→canvas swap.
+    s.ctx.drawImage(im, (cw - dw) / 2, (ch - dh) * 0.44, dw, dh);
+    s.drawn = idx;
+    // The class is owned here: it may only be on when real pixels are on the canvas.
+    s.el.classList.add('has-clip');
+    return true;
+  }
+
+  function loadFrames(s) {
+    if (stillsOnly || s.loading || !s.framesM) return;
+    s.loading = true;
+    const { dir, count } = s.framesM;
+    const canvas = el('canvas', 'sw-scene__canvas');
+    s.canvas = canvas; s.ctx = canvas.getContext('2d', { alpha: false });
+    s.el.appendChild(canvas);
+    sizeCanvas(s);
+    const mine = new Array(count);
+    s.frames = mine;
+
+    for (let i = 0; i < count; i++) {
+      const im = new Image();
+      im.decoding = 'async';
+      im.src = `${dir}/${String(i + 1).padStart(3, '0')}.webp`;
+      im.onload = () => {
+        // The segment may have been released while this frame was in flight (the
+        // visitor scrolled two segments away); don't resurrect a dead scene.
+        if (s.frames !== mine) return;
+        // Reveal as soon as the first frame exists; the rest stream in behind the
+        // poster-identical opening image, so there is nothing to wait for.
+        if (!s.ready) {
+          sizeCanvas(s);
+          // hasClip/ready stay on once set — they only gate the draw loop, which
+          // must keep retrying. What the visitor sees is governed by the CSS class,
+          // and drawFrame adds it only when the canvas actually holds pixels.
+          if (drawFrame(s, 0)) { s.ready = true; s.hasClip = true; }
+        }
+      };
+      mine[i] = im;
+    }
+  }
+
   function loadClip(s) {
+    if (phoneClass && s.framesM) { loadFrames(s); return; }
     if (stillsOnly || s.loading || !s.clip) return;
     s.loading = true;
     // Serve the lighter mobile encode on phone-class devices when one was provided
@@ -441,7 +544,24 @@ function mountScrollWorld(container, config) {
     const now = performance.now();
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
-      if (!s.hasClip || !s.ready || !s.video) continue;
+      if (!s.hasClip || !s.ready) continue;
+      // Frame sequence: pure arithmetic and one drawImage — nothing can stall, so
+      // there is no seek coalescing or watchdog to run.
+      if (s.frames) {
+        if (!s.visible && Math.abs(s.cur - s.target) < 0.002) continue;
+        s.cur += (s.target - s.cur) * (reduce ? 1 : 0.18);
+        const last = s.frames.length - 1;
+        let idx = Math.round(clamp(s.cur, 0, 1) * last);
+        if (idx !== s.drawn) {
+          // A frame still in flight must not blank the scene: hold the last good
+          // one and let the next tick catch up once it has decoded.
+          if (!drawFrame(s, idx)) {
+            for (let k = 1; k <= 4 && !drawFrame(s, clamp(idx - k, 0, last)); k++) {}
+          }
+        }
+        continue;
+      }
+      if (!s.video) continue;
       // Never queue a seek while the decoder is still resolving the last one.
       // On phones a fast flick would otherwise pile up seeks and freeze the clip;
       // cur keeps lerping, so we snap to the latest target the moment it's free.
@@ -592,6 +712,8 @@ function injectCSS() {
   .sw-scene{position:absolute;inset:0;opacity:0;overflow:hidden;will-change:opacity;}
   .sw-scene__video,.sw-scene__still{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 42%;}
   .sw-scene__still{will-change:transform;} .sw-scene.has-clip .sw-scene__still{opacity:0;} .sw-scene__video{z-index:1;}
+  /* The canvas carries its own cover/centring maths (drawFrame), so no object-fit. */
+  .sw-scene__canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;}
   .sw-copylayer{position:fixed;inset:0;z-index:20;pointer-events:none;}
   .sw-copylayer::before{content:"";position:absolute;inset:0;width:min(58vw,780px);background:linear-gradient(90deg,var(--sw-bg) 0%,color-mix(in srgb,var(--sw-bg) 82%,transparent) 34%,color-mix(in srgb,var(--sw-bg) 40%,transparent) 62%,transparent 100%);}
   .sw-copy{position:absolute;left:clamp(18px,5vw,64px);top:50%;transform:translateY(-50%);width:min(42vw,460px);opacity:0;will-change:opacity,transform;}

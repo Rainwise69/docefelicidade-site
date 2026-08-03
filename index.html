@@ -422,7 +422,7 @@
 
   <!-- ===== SCRIPTS ===== -->
   <script src="vendor/lenis.min.js"></script>
-  <script src="scroll-world-engine.js?v=20260802-1"></script>
+  <script src="scroll-world-engine.js?v=20260803-1"></script>
   <script>
     mountScrollWorld(document.getElementById("scroll-world"), {
       hint: "Deslize para viajar",
@@ -441,6 +441,7 @@
           posterMobile: "assets/scroll-world/terra-poster-m.webp?v=20260718-3",
           clip: "assets/scroll-world/video/terra.mp4",
           clipMobile: "assets/scroll-world/video/terra-m.mp4?v=20260718-3",
+          framesMobile: { dir: "assets/scroll-world/frames/terra", count: 48 },
           accent: "#d97c00", scroll: 1.65, linger: 0.22,
           eyebrow: "Cabaços · Alvaiázere · desde 2014",
           title: "Tudo começa no chícharo.",
@@ -458,6 +459,7 @@
           posterMobile: "assets/scroll-world/oficina-poster-m.webp?v=20260718-3",
           clip: "assets/scroll-world/video/oficina.mp4",
           clipMobile: "assets/scroll-world/video/oficina-m.mp4?v=20260718-3",
+          framesMobile: { dir: "assets/scroll-world/frames/oficina", count: 48 },
           accent: "#f08a01", scroll: 1.55, linger: 0.28,
           eyebrow: "Pequenos lotes",
           title: "Feito à mão, em Cabaços.",
@@ -471,6 +473,7 @@
           posterMobile: "assets/scroll-world/comunidade-poster-m.webp?v=20260718-3",
           clip: "assets/scroll-world/video/comunidade.mp4",
           clipMobile: "assets/scroll-world/video/comunidade-m.mp4?v=20260718-3",
+          framesMobile: { dir: "assets/scroll-world/frames/comunidade", count: 48 },
           accent: "#d97c00", scroll: 1.5, linger: 0.25,
           eyebrow: "Da oficina para a região",
           title: "Um doce que aproxima.",
@@ -484,6 +487,7 @@
           posterMobile: "assets/scroll-world/produtos-poster-m.webp?v=20260718-3",
           clip: "assets/scroll-world/video/produtos.mp4",
           clipMobile: "assets/scroll-world/video/produtos-m.mp4?v=20260718-3",
+          framesMobile: { dir: "assets/scroll-world/frames/produtos", count: 48 },
           accent: "#f08a01", scroll: 1.8, linger: 0.46,
           eyebrow: "O sabor da nossa terra",
           title: "Três formas de provar Alvaiázere.",
@@ -503,6 +507,14 @@
       connectorsMobile: [
         "assets/scroll-world/video/terra-oficina-m.mp4?v=20260718-3",
         "assets/scroll-world/video/oficina-comunidade-m.mp4?v=20260718-3",
+        null
+      ],
+      // Camada de telemóvel: sequência de fotogramas em canvas em vez de vídeo.
+      // No iOS todos os browsers são WebKit e um <video> só pinta depois de ter
+      // sido reproduzido, o que depende da política de autoplay de cada app.
+      connectorsFramesMobile: [
+        { dir: "assets/scroll-world/frames/terra-oficina", count: 32 },
+        { dir: "assets/scroll-world/frames/oficina-comunidade", count: 32 },
         null
       ]
     });
